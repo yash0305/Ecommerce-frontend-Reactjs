@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function SellersManagement() {
+export default function SellerManagement() {
   const [sellers, setSellers] = useState([
     {
       id: 1,
