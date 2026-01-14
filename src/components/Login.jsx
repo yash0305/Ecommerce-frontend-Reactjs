@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { login, clearError } from "../features/auth/authSlice";
+import { jwtUtils } from "../features/auth/jwtUtils";
 
 export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { isLoading, error, isAuthenticated } = useSelector(
+  const { isLoading, error, isAuthenticated, user } = useSelector(
     (state) => state.auth
   );
 
@@ -23,12 +24,13 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirect if already authenticated
+  // Redirect based on role if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/admin/sellers");
+    if (isAuthenticated && user?.role) {
+      const redirectPath = jwtUtils.getRoleBasedPath(user.role);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Clear error on unmount
   useEffect(() => {
@@ -50,12 +52,10 @@ export default function Login() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear field error on change
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: "" }));
     }
 
-    // Clear API error
     if (error) {
       dispatch(clearError());
     }
@@ -77,7 +77,6 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate all fields
     const usernameError = validateField("username", formData.username);
     const passwordError = validateField("password", formData.password);
 
@@ -89,18 +88,18 @@ export default function Login() {
       return;
     }
 
-    // Dispatch login action
     try {
-      await dispatch(
+      const result = await dispatch(
         login({
           username: formData.username,
           password: formData.password,
         })
       ).unwrap();
 
-      // Navigate to dashboard on success (handled by useEffect)
+      // Redirect based on role
+      const redirectPath = jwtUtils.getRoleBasedPath(result.user.role);
+      navigate(redirectPath, { replace: true });
     } catch (error) {
-      // Error is handled by Redux state
       console.error("Login failed:", error);
     }
   };

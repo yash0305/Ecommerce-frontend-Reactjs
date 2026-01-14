@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { authAPI } from "./authAPI";
-
+import { jwtUtils } from "./jwtUtils";
 // Thunk: Login
 export const login = createAsyncThunk(
   "auth/login",
@@ -8,17 +8,28 @@ export const login = createAsyncThunk(
     try {
       const response = await authAPI.login(username, password);
 
-      // Store tokens in localStorage
+      // Store tokens
       localStorage.setItem("accessToken", response.accessToken);
       localStorage.setItem("refreshToken", response.refreshToken);
 
-      return response;
+      // Decode token to get user info
+      const decoded = jwtUtils.decodeToken(response.accessToken);
+
+      return {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        user: {
+          username: decoded.sub,
+          role: decoded.role,
+        },
+      };
     } catch (error) {
       return rejectWithValue(error.message || "Login failed");
     }
   }
 );
 
+// Thunk: Refresh Token
 export const refreshToken = createAsyncThunk(
   "auth/refreshToken",
   async (_, { rejectWithValue }) => {
@@ -34,7 +45,16 @@ export const refreshToken = createAsyncThunk(
       // Update access token
       localStorage.setItem("accessToken", response.accessToken);
 
-      return response;
+      // Decode new token
+      const decoded = jwtUtils.decodeToken(response.accessToken);
+
+      return {
+        accessToken: response.accessToken,
+        user: {
+          username: decoded.sub,
+          role: decoded.role,
+        },
+      };
     } catch (error) {
       // Clear tokens on refresh failure
       localStorage.removeItem("accessToken");
@@ -49,8 +69,16 @@ export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      // Optional: Call logout API endpoint
-      // await authAPI.logout();
+      const refreshTokenValue = localStorage.getItem("refreshToken");
+
+      // Call logout API if refresh token exists
+      if (refreshTokenValue) {
+        try {
+          await authAPI.logout(refreshTokenValue);
+        } catch (error) {
+          console.error("Logout API call failed:", error);
+        }
+      }
 
       // Clear tokens
       localStorage.removeItem("accessToken");
@@ -63,26 +91,43 @@ export const logout = createAsyncThunk(
   }
 );
 
-// Initial state
-const initialState = {
-  user: null,
-  accessToken: localStorage.getItem("accessToken") || null,
-  refreshToken: localStorage.getItem("refreshToken") || null,
-  isAuthenticated: !!localStorage.getItem("accessToken"),
-  isLoading: false,
-  error: null,
+// Load initial state from localStorage
+const loadInitialState = () => {
+  const accessToken = localStorage.getItem("accessToken");
+  const refreshToken = localStorage.getItem("refreshToken");
+
+  if (accessToken && !jwtUtils.isTokenExpired(accessToken)) {
+    const decoded = jwtUtils.decodeToken(accessToken);
+    return {
+      user: {
+        username: decoded.sub,
+        role: decoded.role,
+      },
+      accessToken,
+      refreshToken,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    };
+  }
+
+  return {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+  };
 };
 
 // Auth Slice
 const authSlice = createSlice({
   name: "auth",
-  initialState,
+  initialState: loadInitialState(),
   reducers: {
     clearError: (state) => {
       state.error = null;
-    },
-    setUser: (state, action) => {
-      state.user = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -95,7 +140,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user || null;
+        state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
         state.refreshToken = action.payload.refreshToken;
         state.error = null;
@@ -114,6 +159,7 @@ const authSlice = createSlice({
       .addCase(refreshToken.fulfilled, (state, action) => {
         state.isLoading = false;
         state.accessToken = action.payload.accessToken;
+        state.user = action.payload.user;
         state.isAuthenticated = true;
       })
       .addCase(refreshToken.rejected, (state) => {
@@ -143,5 +189,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError } = authSlice.actions;
 export default authSlice.reducer;

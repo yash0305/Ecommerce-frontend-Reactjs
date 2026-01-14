@@ -1,10 +1,10 @@
-const API_BASE_URL = "YOUR_API_ENDPOINT"; // Replace with your API URL
+const API_BASE_URL = "http://localhost:8080/user";
 
 export const authAPI = {
   // Login
   login: async (username, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -17,8 +17,7 @@ export const authAPI = {
         throw new Error(error.message || "Invalid credentials");
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       throw error;
     }
@@ -27,42 +26,43 @@ export const authAPI = {
   // Refresh Token
   refreshToken: async (refreshToken) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetch(`${API_BASE_URL}/refresh`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify(refreshToken),
       });
 
       if (!response.ok) {
         throw new Error("Token refresh failed");
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       throw error;
     }
   },
 
-  // Logout (optional)
-  logout: async () => {
+  // Logout
+  logout: async (refreshToken) => {
     try {
-      const accessToken = localStorage.getItem("accessToken");
-
-      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      const response = await fetch(`${API_BASE_URL}/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
+        body: JSON.stringify(refreshToken),
       });
 
-      return response.ok;
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      return true;
     } catch (error) {
       console.error("Logout API error:", error);
-      return false;
+      throw error;
     }
   },
 };

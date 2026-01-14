@@ -1,25 +1,22 @@
 import store from "../../store";
 import { refreshToken } from "./authSlice";
-import { tokenUtils } from "./tokenUtils";
+import { jwtUtils } from "./jwtUtils";
 
 export const apiClient = {
   request: async (url, options = {}) => {
-    let accessToken = tokenUtils.getAccessToken();
+    let accessToken = localStorage.getItem("accessToken");
 
     // Check if access token is expired or will expire soon
-    if (accessToken && tokenUtils.isTokenExpired(accessToken)) {
+    if (accessToken && jwtUtils.isTokenExpired(accessToken)) {
       try {
-        // Dispatch refresh token action
         const result = await store.dispatch(refreshToken()).unwrap();
         accessToken = result.accessToken;
       } catch (error) {
-        // Redirect to login if refresh fails
         window.location.href = "/login";
         throw error;
       }
     }
 
-    // Add authorization header
     const headers = {
       "Content-Type": "application/json",
       ...options.headers,
@@ -36,7 +33,7 @@ export const apiClient = {
       });
 
       // If unauthorized, try refreshing token
-      if (response.status === 401 && tokenUtils.getRefreshToken()) {
+      if (response.status === 401 && localStorage.getItem("refreshToken")) {
         try {
           const result = await store.dispatch(refreshToken()).unwrap();
           accessToken = result.accessToken;

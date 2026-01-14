@@ -6,7 +6,7 @@ export default function UserRegistration() {
     email: "",
     mobileNumber: "",
     password: "",
-    role: "",
+    role: "CUSTOMER",
   });
 
   const [errors, setErrors] = useState({
@@ -378,7 +378,9 @@ export default function UserRegistration() {
               >
                 <option value="">Select a role</option>
                 <option value="ADMIN">ADMIN</option>
-                <option value="CUSTOMER">CUSTOMER</option>
+                <option selected value="CUSTOMER">
+                  CUSTOMER
+                </option>
                 <option value="SELLER">SELLER</option>
               </select>
               {errors.role && touched.role && (

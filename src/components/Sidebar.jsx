@@ -1,9 +1,11 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user } = useSelector((state) => state.auth);
 
   const menuItems = [
     {
@@ -180,7 +182,7 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 truncate">
-                Admin User
+                {user.username}
               </p>
               <p className="text-xs text-gray-500 truncate">
                 admin@example.com
