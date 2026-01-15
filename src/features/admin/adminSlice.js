@@ -86,7 +86,7 @@ export const updateSeller = createAsyncThunk(
   async (sellerData, { rejectWithValue }) => {
     try {
       console.log("Updating seller:", sellerData.id);
-      const response = await api.put(
+      const response = await api.post(
         `/admin/sellers/${sellerData.id}`,
         sellerData
       );
@@ -107,7 +107,7 @@ export const approveSeller = createAsyncThunk(
   async (sellerId, { rejectWithValue }) => {
     try {
       console.log("Approving seller:", sellerId);
-      const response = await api.put(`/admin/sellers/${sellerId}/approve`);
+      const response = await api.post(`/admin/approval?sellerId=${sellerId}`);
       console.log("Seller approved successfully:", response.data);
       return response.data;
     } catch (error) {
@@ -125,7 +125,7 @@ export const rejectSeller = createAsyncThunk(
   async (sellerId, { rejectWithValue }) => {
     try {
       console.log("Rejecting seller:", sellerId);
-      const response = await api.put(`/admin/sellers/${sellerId}/reject`);
+      const response = await api.post(`/admin/rejected?sellerId=${sellerId}`);
       console.log("Seller rejected successfully:", response.data);
       return response.data;
     } catch (error) {

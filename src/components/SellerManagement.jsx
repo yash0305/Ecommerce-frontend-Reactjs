@@ -1,205 +1,216 @@
-import React, { useState, useEffect } from "react";
+// import React, { useState, useEffect } from "react";
+// import { useDispatch, useSelector } from "react-redux";
+// import {
+//   fetchSellers,
+//   updateSeller,
+//   clearError,
+// } from "../features/admin/adminSlice";
+// import DetailModal from "../components/common/DetailModal";
+// import UpdateModal from "../components/common/UpdateModal";
+// import StatusBadge from "../components/common/StatusBadge";
+// import VerifiedBadge from "../components/common/VerifiedBadge";
+// import SkeletonRow from "../components/common/SkeletonRow";
+// import DESIGN_TOKENS from "../components/constants/designTokens";
+
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchSellers,
+  approveSeller,
+  rejectSeller,
+  deleteSeller,
   updateSeller,
   clearError,
+  clearSuccess,
 } from "../features/admin/adminSlice";
-import DetailModal from "../components/common/DetailModal";
-import UpdateModal from "../components/common/UpdateModal";
-import StatusBadge from "../components/common/StatusBadge";
-import VerifiedBadge from "../components/common/VerifiedBadge";
-import SkeletonRow from "../components/common/SkeletonRow";
-import DESIGN_TOKENS from "../components/constants/designTokens";
 
 const SellerManagement = () => {
   const dispatch = useDispatch();
-  const { sellers, loading, error, updateLoading } = useSelector(
+  const { sellers, loading, updateLoading, error, success } = useSelector(
     (state) => state.admin
   );
 
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [selectedSeller, setSelectedSeller] = useState(null);
-
   useEffect(() => {
+    console.log("Component mounted, fetching sellers...");
     dispatch(fetchSellers());
   }, [dispatch]);
 
-  const handleViewDetails = (seller) => {
-    setSelectedSeller(seller);
-    setShowDetailModal(true);
-  };
+  useEffect(() => {
+    if (error) {
+      console.error("Error occurred:", error);
+      alert(`Error: ${error}`);
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
 
-  const handleOpenUpdate = (seller) => {
-    setSelectedSeller(seller);
-    setShowUpdateModal(true);
-  };
+  useEffect(() => {
+    if (success) {
+      console.log("Success:", success);
+      alert(success);
+      dispatch(clearSuccess());
+      dispatch(fetchSellers()); // Refresh the list
+    }
+  }, [success, dispatch]);
 
-  const handleUpdate = async (formData) => {
-    const result = await dispatch(updateSeller(formData));
-    if (result.type === "admin/updateSeller/fulfilled") {
-      setShowUpdateModal(false);
-      setSelectedSeller(null);
+  const handleApprove = (sellerId) => {
+    if (window.confirm("Are you sure you want to approve this seller?")) {
+      console.log("Approving seller:", sellerId);
+      dispatch(approveSeller(sellerId));
     }
   };
 
+  const handleReject = (sellerId) => {
+    if (window.confirm("Are you sure you want to reject this seller?")) {
+      console.log("Rejecting seller:", sellerId);
+      dispatch(rejectSeller(sellerId));
+    }
+  };
+
+  const handleDelete = (sellerId) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this seller? This action cannot be undone."
+      )
+    ) {
+      console.log("Deleting seller:", sellerId);
+      dispatch(deleteSeller(sellerId));
+    }
+  };
+
+  const handleUpdate = (seller) => {
+    // Example: You can open a modal or form to edit seller details
+    const updatedData = {
+      id: seller.id,
+      name: prompt("Enter new name:", seller.name) || seller.name,
+      // Add more fields as needed
+    };
+
+    dispatch(updateSeller(updatedData));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-xl font-semibold">Loading sellers...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen p-4 md:p-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className={DESIGN_TOKENS.spacing.section}>
-          <h1 className={DESIGN_TOKENS.typography.heading}>
-            Sellers Management
-          </h1>
-          <p className={`${DESIGN_TOKENS.typography.subheading} mt-2`}>
-            Manage and review seller accounts
-          </p>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div
-            className={`bg-red-50 border border-red-200 text-red-700 px-4 py-3 ${DESIGN_TOKENS.radius} ${DESIGN_TOKENS.spacing.section}`}
-          >
-            <div className="flex justify-between items-center">
-              <p className="font-medium">{error}</p>
-              <button
-                onClick={() => dispatch(clearError())}
-                className="text-red-700 hover:text-red-900"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Table Card */}
-        <div
-          className={`bg-white ${DESIGN_TOKENS.radius} ${DESIGN_TOKENS.shadow} overflow-hidden`}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-blue-600 text-white">
-                <tr>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold">
-                    Username
-                  </th>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold">
-                    Mobile Number
-                  </th>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold">
-                    Email
-                  </th>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold">
-                    Status
-                  </th>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold hidden sm:table-cell">
-                    Email Verified
-                  </th>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold hidden sm:table-cell">
-                    Mobile Verified
-                  </th>
-                  <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {loading ? (
-                  <>
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                  </>
-                ) : sellers.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="7"
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      No sellers found
-                    </td>
-                  </tr>
-                ) : (
-                  sellers.map((seller) => (
-                    <tr
-                      key={seller.id}
-                      className={`hover:bg-gray-50 ${DESIGN_TOKENS.transition}`}
-                    >
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-900 font-medium">
-                        {seller.username}
-                      </td>
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
-                        {seller.mobileNumber}
-                      </td>
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-600">
-                        {seller.email}
-                      </td>
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm">
-                        <StatusBadge status={seller.status} />
-                      </td>
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm hidden sm:table-cell">
-                        <VerifiedBadge verified={seller.emailVerified} />
-                      </td>
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm hidden sm:table-cell">
-                        <VerifiedBadge verified={seller.mobileVerified} />
-                      </td>
-                      <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm">
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <button
-                            onClick={() => handleViewDetails(seller)}
-                            className={`px-3 py-1.5 ${DESIGN_TOKENS.colors.primary} text-white ${DESIGN_TOKENS.radius} ${DESIGN_TOKENS.transition} text-xs font-medium`}
-                          >
-                            Details
-                          </button>
-                          <button
-                            onClick={() => handleOpenUpdate(seller)}
-                            className={`px-3 py-1.5 ${DESIGN_TOKENS.colors.success} text-white ${DESIGN_TOKENS.radius} ${DESIGN_TOKENS.transition} text-xs font-medium`}
-                          >
-                            Update
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Manage Sellers</h1>
+        <p className="text-gray-600 mt-2">Total Sellers: {sellers.length}</p>
       </div>
 
-      {/* Modals */}
-      <DetailModal
-        seller={selectedSeller}
-        isOpen={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false);
-          setSelectedSeller(null);
-        }}
-      />
+      {sellers.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-500 text-lg">No sellers found</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <table className="min-w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Phone
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sellers.map((seller) => (
+                <tr key={seller.id} className="hover:bg-gray-50 transition">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {seller.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {seller.name || seller.username}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {seller.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {seller.phone || "N/A"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        seller.status === "APPROVED" || seller.approved === true
+                          ? "bg-green-100 text-green-800"
+                          : seller.status === "REJECTED" ||
+                            seller.approved === false
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {seller.status ||
+                        (seller.approved === true
+                          ? "APPROVED"
+                          : seller.approved === false
+                          ? "REJECTED"
+                          : "PENDING")}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex gap-2">
+                      {seller.status !== "APPROVED" &&
+                        seller.approved !== true && (
+                          <button
+                            onClick={() => handleApprove(seller.id)}
+                            disabled={updateLoading}
+                            className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                          >
+                            Approve
+                          </button>
+                        )}
+                      {seller.status !== "REJECTED" &&
+                        seller.approved !== false && (
+                          <button
+                            onClick={() => handleReject(seller.id)}
+                            disabled={updateLoading}
+                            className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                          >
+                            Reject
+                          </button>
+                        )}
+                      <button
+                        onClick={() => handleDelete(seller.id)}
+                        disabled={updateLoading}
+                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <UpdateModal
-        seller={selectedSeller}
-        isOpen={showUpdateModal}
-        onClose={() => {
-          setShowUpdateModal(false);
-          setSelectedSeller(null);
-        }}
-        onUpdate={handleUpdate}
-        loading={updateLoading}
-      />
+      {updateLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <p className="text-lg font-semibold">Processing...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
