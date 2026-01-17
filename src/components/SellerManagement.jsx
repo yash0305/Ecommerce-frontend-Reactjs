@@ -27,7 +27,7 @@ import {
 const SellerManagement = () => {
   const dispatch = useDispatch();
   const { sellers, loading, updateLoading, error, success } = useSelector(
-    (state) => state.admin
+    (state) => state.admin,
   );
 
   useEffect(() => {
@@ -69,7 +69,7 @@ const SellerManagement = () => {
   const handleDelete = (sellerId) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this seller? This action cannot be undone."
+        "Are you sure you want to delete this seller? This action cannot be undone.",
       )
     ) {
       console.log("Deleting seller:", sellerId);
@@ -145,7 +145,7 @@ const SellerManagement = () => {
                     {seller.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {seller.phone || "N/A"}
+                    {seller.mobileNumber || "N/A"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -153,17 +153,17 @@ const SellerManagement = () => {
                         seller.status === "APPROVED" || seller.approved === true
                           ? "bg-green-100 text-green-800"
                           : seller.status === "REJECTED" ||
-                            seller.approved === false
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
+                              seller.approved === false
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
                       {seller.status ||
                         (seller.approved === true
                           ? "APPROVED"
                           : seller.approved === false
-                          ? "REJECTED"
-                          : "PENDING")}
+                            ? "REJECTED"
+                            : "PENDING")}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
