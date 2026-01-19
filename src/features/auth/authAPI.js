@@ -31,7 +31,9 @@ export const authAPI = {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(refreshToken),
+        body: JSON.stringify({
+          refreshToken: refreshToken,
+        }),
       });
 
       if (!response.ok) {
