@@ -2,7 +2,7 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import { Routes, Route } from "react-router-dom";
 import SellerManagement from "../components/SellerManagement";
-import { RoleBasedRoute } from "../features/auth/RoleBasedRoute";
+import RoleBasedRoute from "../features/auth/RoleBasedRoute";
 
 function AdminPage() {
   return (

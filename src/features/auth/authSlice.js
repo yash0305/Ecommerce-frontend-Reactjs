@@ -4,127 +4,68 @@ import { jwtUtils } from "./jwtUtils";
 // Thunk: Login
 export const login = createAsyncThunk(
   "auth/login",
-  async ({ username, password }, { rejectWithValue }) => {
+  async (data, { rejectWithValue }) => {
     try {
-      const response = await authAPI.login(username, password);
+      const res = await authAPI.login(data.username, data.password);
+      const { accessToken, refreshToken } = res.data;
 
-      // Store tokens
-      localStorage.setItem("accessToken", response.accessToken);
-      localStorage.setItem("refreshToken", response.refreshToken);
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
 
-      // Decode token to get user info
-      const decoded = jwtUtils.decodeToken(response.accessToken);
+      const decoded = jwtUtils.decodeToken(accessToken);
 
       return {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        user: {
-          username: decoded.sub,
-          role: decoded.role,
-        },
+        accessToken,
+        refreshToken,
+        user: { username: decoded.sub, role: decoded.role },
       };
-    } catch (error) {
-      return rejectWithValue(error.message || "Login failed");
+    } catch {
+      return rejectWithValue("Invalid credentials");
     }
-  }
+  },
 );
 
-// Thunk: Refresh Token
 export const refreshToken = createAsyncThunk(
-  "auth/refreshToken",
+  "auth/refresh",
   async (_, { rejectWithValue }) => {
     try {
-      const refreshTokenValue = localStorage.getItem("refreshToken");
+      const token = localStorage.getItem("refreshToken");
+      const res = await authAPI.refreshToken(token);
 
-      if (!refreshTokenValue) {
-        throw new Error("No refresh token available");
-      }
+      localStorage.setItem("accessToken", res.data.accessToken);
 
-      const response = await authAPI.refreshToken(refreshTokenValue);
-
-      // Update access token
-      localStorage.setItem("accessToken", response.accessToken);
-
-      // Decode new token
-      const decoded = jwtUtils.decodeToken(response.accessToken);
+      const decoded = jwtUtils.decodeToken(res.data.accessToken);
 
       return {
-        accessToken: response.accessToken,
-        user: {
-          username: decoded.sub,
-          role: decoded.role,
-        },
+        accessToken: res.data.accessToken,
+        user: { username: decoded.sub, role: decoded.role },
       };
-    } catch (error) {
-      // Clear tokens on refresh failure
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      return rejectWithValue(error.message || "Token refresh failed");
+    } catch {
+      localStorage.clear();
+      return rejectWithValue("Session expired");
     }
-  }
+  },
 );
 
-// Thunk: Logout
-export const logout = createAsyncThunk(
-  "auth/logout",
-  async (_, { rejectWithValue }) => {
-    try {
-      const refreshTokenValue = localStorage.getItem("refreshToken");
+export const logout = createAsyncThunk("auth/logout", async () => {
+  const token = localStorage.getItem("refreshToken");
+  if (token) await authAPI.logout(token);
+  localStorage.clear();
+});
 
-      // Call logout API if refresh token exists
-      if (refreshTokenValue) {
-        try {
-          await authAPI.logout(refreshTokenValue);
-        } catch (error) {
-          console.error("Logout API call failed:", error);
-        }
-      }
-
-      // Clear tokens
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-
-      return null;
-    } catch (error) {
-      return rejectWithValue(error.message || "Logout failed");
-    }
-  }
-);
-
-// Load initial state from localStorage
-const loadInitialState = () => {
-  const accessToken = localStorage.getItem("accessToken");
-  const refreshToken = localStorage.getItem("refreshToken");
-
-  if (accessToken && !jwtUtils.isTokenExpired(accessToken)) {
-    const decoded = jwtUtils.decodeToken(accessToken);
-    return {
-      user: {
-        username: decoded.sub,
-        role: decoded.role,
-      },
-      accessToken,
-      refreshToken,
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-    };
-  }
-
-  return {
-    user: null,
-    accessToken: null,
-    refreshToken: null,
-    isAuthenticated: false,
-    isLoading: false,
-    error: null,
-  };
+const initialState = {
+  isAuthenticated: !!localStorage.getItem("accessToken"),
+  accessToken: localStorage.getItem("accessToken"),
+  refreshToken: localStorage.getItem("refreshToken"),
+  user: localStorage.getItem("accessToken")
+    ? jwtUtils.decodeToken(localStorage.getItem("accessToken"))
+    : null,
 };
 
 // Auth Slice
 const authSlice = createSlice({
   name: "auth",
-  initialState: loadInitialState(),
+  initialState: initialState,
   reducers: {
     clearError: (state) => {
       state.error = null;
@@ -137,14 +78,9 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
-        state.error = null;
-      })
+      .addCase(login.fulfilled, (s, a) =>
+        Object.assign(s, a.payload, { isAuthenticated: true }),
+      )
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
@@ -156,12 +92,9 @@ const authSlice = createSlice({
       .addCase(refreshToken.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(refreshToken.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.accessToken = action.payload.accessToken;
-        state.user = action.payload.user;
-        state.isAuthenticated = true;
-      })
+      .addCase(refreshToken.fulfilled, (s, a) =>
+        Object.assign(s, a.payload, { isAuthenticated: true }),
+      )
       .addCase(refreshToken.rejected, (state) => {
         state.isLoading = false;
         state.isAuthenticated = false;
@@ -175,14 +108,7 @@ const authSlice = createSlice({
       .addCase(logout.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(logout.fulfilled, (state) => {
-        state.isLoading = false;
-        state.isAuthenticated = false;
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.error = null;
-      })
+      .addCase(logout.fulfilled, (s) => Object.assign(s, initialState))
       .addCase(logout.rejected, (state) => {
         state.isLoading = false;
       });

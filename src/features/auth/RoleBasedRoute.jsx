@@ -1,19 +1,12 @@
-import React from "react";
 import { Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { jwtUtils } from "../auth/jwtUtils";
 
-export function RoleBasedRoute({ children, allowedRoles }) {
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+export default function RoleBasedRoute({ children, allowedRoles }) {
+  const { user } = useSelector((s) => s.auth);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user?.role)) {
+    return <Navigate to={jwtUtils.getRoleBasedPath(user?.role)} />;
   }
-
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Redirect to role-based dashboard if user doesn't have permission
-    const redirectPath = jwtUtils.getRoleBasedPath(user?.role);
-    return <Navigate to={redirectPath} replace />;
-  }
-
   return children;
 }

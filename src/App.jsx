@@ -5,9 +5,20 @@ import SellerPage from "./pages/SellerPage";
 import UserRegistrationPage from "./pages/UserRegistrationPage";
 import Login from "./components/Login";
 import AdminPage from "./pages/AdminPage";
-import { RoleBasedRoute } from "./features/auth/RoleBasedRoute";
+import RoleBasedRoute from "./features/auth/RoleBasedRoute";
+import { useEffect } from "react";
+import { jwtUtils } from "./features/auth/jwtUtils";
+import store from "./store";
+import { refreshToken } from "./features/auth/authSlice";
 
 function App() {
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token && jwtUtils.isTokenExpired(token)) {
+      store.dispatch(refreshToken());
+    }
+  }, []);
+
   return (
     <>
       <Routes>
